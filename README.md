@@ -1,6 +1,10 @@
 # ningle-fbr (WIP)
 Plugin for [ningle](https://github.com/fukamachi/ningle) and [jingle](https://github.com/dnaeon/cl-jingle) to enable file-based routing
 
+# What is file-based routing?
+
+File-based routing is a concept commonly used in modern web frameworks such as [Next.js](https://nextjs.org/). Instead of explicitly defining routes through configuration or code, the framework automatically sets up routes based on the file hierarchy of a particular directory (usually the "pages" or "routes" directory).
+
 # Usage
 
 To use ningle-fbr, you must use [package-inferred-system](https://asdf.common-lisp.dev/asdf/The-package_002dinferred_002dsystem-extension.html).
