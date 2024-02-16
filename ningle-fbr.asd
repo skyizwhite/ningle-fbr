@@ -7,4 +7,5 @@
   :license "MIT"
   :class :package-inferred-system
   :pathname "src"
-  :depends-on ("ningle-fbr/main"))
+  :depends-on ("ningle-fbr/main")
+  :in-order-to ((test-op (test-op "ningle-fbr-tests"))))
