@@ -21,31 +21,27 @@
 (defun format-url (url)
   (replace-dynamic-annotation (remove-index url)))
 
-(defun pathname->url (pathname dir)
+(defun pathname->url (pathname dir system)
   (format-url
-   (re:regex-replace (concatenate 'string
-                                  (namestring (uiop/os:getcwd))
-                                  dir)
+   (re:regex-replace (namestring (asdf:system-relative-pathname system dir))
                      (remove-file-type (namestring pathname))
                      "")))
 
 (defun pathname->package (pathname system system-pathname)
   (alx:make-keyword
    (string-upcase
-    (re:regex-replace (concatenate 'string
-                                   (namestring (uiop/os:getcwd))
-                                   system-pathname)
+    (re:regex-replace (namestring system-pathname)
                       (remove-file-type (namestring pathname))
-                      system))))
+                      (concatenate 'string system "/")))))
 
 (defun dir->pathnames (dir)
   (directory (concatenate 'string
                           dir
                           "/**/*.lisp")))
 
-(defun dir->urls (dir)
+(defun dir->urls (dir system)
   (mapcar (lambda (pathname)
-            (pathname->url pathname dir))
+            (pathname->url pathname dir system))
           (dir->pathnames dir)))
 
 (defun dir->packages (dir system system-pathname)
@@ -56,9 +52,11 @@
 (defparameter *http-request-methods*
   '(:GET :HEAD :POST :PUT :DELETE :CONNECT :OPTIONS :PATCH))
 
-(defun enable-file-based-routing (app &key dir system system-pathname)
-  (let ((urls (dir->urls dir))
-        (packages (dir->packages dir system system-pathname)))
+(defun enable-file-based-routing (app &key directory system)
+  (let* ((system-pathname (asdf/component:component-relative-pathname
+                           (asdf/find-system:find-system system)))
+         (urls (dir->urls directory system))
+         (packages (dir->packages directory system system-pathname)))
     (ql:quickload packages)
     (loop
       :for url :in urls

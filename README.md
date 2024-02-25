@@ -31,9 +31,8 @@ To use ningle-fbr, you must use [package-inferred-system](https://asdf.common-li
 (defun update-routes ()
   (ningle-fbr:enable-file-based-routing
     *app*
-    :dir "src/routes"
-    :system "example"
-    :system-pathname "src"))
+    :directory "src/routes"
+    :system "example"))
 
 (update-routes)
 ```
