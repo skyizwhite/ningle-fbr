@@ -21,18 +21,18 @@
 (defun format-url (url)
   (replace-dynamic-annotation (remove-index url)))
 
-(defun pathname->url (pathname dir system)
+(defun pathname->url (pathname dir-namestring)
   (format-url
-   (re:regex-replace (namestring (asdf:system-relative-pathname system dir))
+   (re:regex-replace dir-namestring
                      (remove-file-type (namestring pathname))
                      "")))
 
-(defun pathname->package (pathname system system-pathname)
+(defun pathname->package (pathname system-path-namestring system-prefix)
   (alx:make-keyword
    (string-upcase
-    (re:regex-replace (namestring system-pathname)
+    (re:regex-replace system-path-namestring
                       (remove-file-type (namestring pathname))
-                      (concatenate 'string system "/")))))
+                      system-prefix))))
 
 (defun dir->pathnames (dir)
   (directory (concatenate 'string
@@ -40,23 +40,27 @@
                           "/**/*.lisp")))
 
 (defun dir->urls (dir system)
-  (mapcar (lambda (pathname)
-            (pathname->url pathname dir system))
-          (dir->pathnames dir)))
+  (let ((dir-namestring (namestring
+                         (asdf:system-relative-pathname system dir))))
+    (mapcar (lambda (pathname)
+              (pathname->url pathname dir-namestring))
+            (dir->pathnames dir))))
 
-(defun dir->packages (dir system system-pathname)
-  (mapcar (lambda (pathname)
-            (pathname->package pathname system system-pathname))
-          (dir->pathnames dir)))
+(defun dir->packages (dir system)
+  (let ((system-path-namestring (namestring 
+                                 (asdf/component:component-relative-pathname
+                                  (asdf/find-system:find-system system))))
+        (system-prefix (concatenate 'string system "/")))
+    (mapcar (lambda (pathname)
+              (pathname->package pathname system-path-namestring system-prefix))
+            (dir->pathnames dir))))
 
 (defparameter *http-request-methods*
   '(:GET :HEAD :POST :PUT :DELETE :CONNECT :OPTIONS :PATCH))
 
 (defun enable-file-based-routing (app &key directory system)
-  (let* ((system-pathname (asdf/component:component-relative-pathname
-                           (asdf/find-system:find-system system)))
-         (urls (dir->urls directory system))
-         (packages (dir->packages directory system system-pathname)))
+  (let ((urls (dir->urls directory system))
+        (packages (dir->packages directory system)))
     (ql:quickload packages)
     (loop
       :for url :in urls
