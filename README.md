@@ -1,5 +1,6 @@
 # ningle-fbr (WIP)
-Plugin for [ningle](https://github.com/fukamachi/ningle) and [jingle](https://github.com/dnaeon/cl-jingle) to enable file-based routing
+
+An utility for [ningle](https://github.com/fukamachi/ningle) and [jingle](https://github.com/dnaeon/cl-jingle) to enable file-based routing
 
 # What is file-based routing?
 
