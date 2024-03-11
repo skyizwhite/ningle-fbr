@@ -1,7 +1,6 @@
 (uiop:define-package :ningle-fbr
   (:nicknames #:ningle-fbr/main)
   (:use #:cl)
-  (:local-nicknames (#:alx #:alexandria))
   (:local-nicknames (#:re #:cl-ppcre))
   (:local-nicknames (#:ng #:ningle))
   (:export #:enable-file-based-routing))
@@ -28,11 +27,10 @@
                      "")))
 
 (defun pathname->package (pathname system-path-namestring system-prefix)
-  (alx:make-keyword
-   (string-upcase
-    (re:regex-replace system-path-namestring
-                      (remove-file-type (namestring pathname))
-                      system-prefix))))
+  (string-upcase
+   (re:regex-replace system-path-namestring
+                     (remove-file-type (namestring pathname))
+                     system-prefix)))
 
 (defun dir->pathnames (dir)
   (directory (concatenate 'string
@@ -52,7 +50,7 @@
             (dir->pathnames dir))))
 
 (defparameter *http-request-methods*
-  '(:GET :HEAD :POST :PUT :DELETE :CONNECT :OPTIONS :PATCH))
+  '(:GET :POST :PUT :DELETE :HEAD :CONNECT :OPTIONS :PATCH))
 
 (defun enable-file-based-routing (app &key directory system)
   (loop
@@ -60,6 +58,7 @@
     :do (ql:quickload pkg) 
         (loop
           :for method :in *http-request-methods*
-          :do (let ((handler (find-symbol (string (alx:symbolicate 'on- method)) pkg)))
+          :do (let ((handler (find-symbol (concatenate 'string "ON-" (string method))
+                                          pkg)))
                 (when handler
                   (setf (ng:route app url :method method) handler))))))
