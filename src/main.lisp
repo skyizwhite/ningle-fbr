@@ -39,34 +39,27 @@
                           dir
                           "/**/*.lisp")))
 
-(defun dir->urls (dir system)
+(defun dir->urls-and-packages (dir system)
   (let ((dir-namestring (namestring
-                         (asdf:system-relative-pathname system dir))))
-    (mapcar (lambda (pathname)
-              (pathname->url pathname dir-namestring))
-            (dir->pathnames dir))))
-
-(defun dir->packages (dir system)
-  (let ((system-path-namestring (namestring 
+                         (asdf:system-relative-pathname system dir)))
+        (system-path-namestring (namestring 
                                  (asdf/component:component-relative-pathname
                                   (asdf/find-system:find-system system))))
         (system-prefix (concatenate 'string system "/")))
     (mapcar (lambda (pathname)
-              (pathname->package pathname system-path-namestring system-prefix))
+              (cons (pathname->url pathname dir-namestring)
+                    (pathname->package pathname system-path-namestring system-prefix)))
             (dir->pathnames dir))))
 
 (defparameter *http-request-methods*
   '(:GET :HEAD :POST :PUT :DELETE :CONNECT :OPTIONS :PATCH))
 
 (defun enable-file-based-routing (app &key directory system)
-  (let ((urls (dir->urls directory system))
-        (packages (dir->packages directory system)))
-    (ql:quickload packages)
-    (loop
-      :for url :in urls
-      :for pkg :in packages
-      :do (loop
-            :for method :in *http-request-methods*
-            :do (let ((handler (find-symbol (string (alx:symbolicate 'on- method)) pkg)))
-                  (when handler
-                    (setf (ng:route app url :method method) handler)))))))
+  (loop
+    :for (url . pkg) :in (dir->urls-and-packages directory system)
+    :do (ql:quickload pkg) 
+        (loop
+          :for method :in *http-request-methods*
+          :do (let ((handler (find-symbol (string (alx:symbolicate 'on- method)) pkg)))
+                (when handler
+                  (setf (ng:route app url :method method) handler))))))
