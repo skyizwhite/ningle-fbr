@@ -3,7 +3,7 @@
   (:use #:cl)
   (:local-nicknames (#:re #:cl-ppcre))
   (:local-nicknames (#:ng #:ningle))
-  (:export #:enable-file-based-routing))
+  (:export #:assign-routes))
 (in-package :ningle-fbr)
 
 (defun remove-file-type (namestr)
@@ -52,7 +52,7 @@
 (defparameter *http-request-methods*
   '(:GET :POST :PUT :DELETE :HEAD :CONNECT :OPTIONS :PATCH))
 
-(defun enable-file-based-routing (app &key directory system)
+(defun assign-routes (app &key directory system)
   (loop
     :for (url . pkg) :in (dir->urls-and-packages directory system)
     :do (ql:quickload pkg) 

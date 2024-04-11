@@ -24,23 +24,27 @@ To use ningle-fbr, you must use [package-inferred-system](https://asdf.common-li
   (:nicknames #:example/app)
   (:use #:cl)
   (:import-from #:ningle)
-  (:import-from #:ningle-fbr))
+  (:import-from #:ningle-fbr
+　　　　　　　　　 #:assign-routes))
 (in-package #:example/app)
 
 (defparameter *app* (make-instance 'ningle:<app>))
 
-(defun update-routes ()
-  (ningle-fbr:enable-file-based-routing
-    *app*
-    :directory "src/routes"
-    :system "example"))
-
-(update-routes)
+(assign-routes *app*
+               :directory "src/routes"
+               :system "example")
 ```
 
 ## Static routing
 
 `/src/routes/index.lisp` → `/`
+
+`/src/routes/hello.lisp` → `/hello`
+
+`/src/routes/users/index.lisp` → `/users`
+
+`/src/routes/nested/page.lisp` → `/nested/page`
+
 ```lisp
 (uiop:define-package #:example/routes/index
   (:use #:cl)
@@ -67,9 +71,9 @@ To use ningle-fbr, you must use [package-inferred-system](https://asdf.common-li
 
 A file or directory name prefixed with '=' indicates a dynamic path. 
 
-In the example below, the name parameter can be obtained from handler's params.
+In the example below, the parameter `id` can be obtained from handler's params.
 
-`/src/routes/user/=name.lisp` → `/user/:name`
+`/src/routes/user/=id.lisp` → `/user/:id`
 
 # License
 
