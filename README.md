@@ -48,22 +48,22 @@ To use ningle-fbr, you must use [package-inferred-system](https://asdf.common-li
 ```lisp
 (uiop:define-package #:example/routes/index
   (:use #:cl)
-  (:export #:on-get
-           #:on-post
-           #:on-put
-           #:on-delete))
+  (:export #:handle-get
+           #:handle-post
+           #:handle-put
+           #:handle-delete))
 (in-package #:example/routes/index)
 
-(defun on-get (params)
+(defun handle-get (params)
   ...)
 
-(defun on-post (params)
+(defun handle-post (params)
   ...)
 
-(defun on-put (params)
+(defun handle-put (params)
   ...)
 
-(defun on-delete (params)
+(defun handle-delete (params)
   ...)
 ```
 

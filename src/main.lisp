@@ -58,7 +58,7 @@
     :do (ql:quickload pkg) 
         (loop
           :for method :in *http-request-methods*
-          :do (let ((handler (find-symbol (concatenate 'string "ON-" (string method))
+          :do (let ((handler (find-symbol (concatenate 'string "HANDLE-" (string method))
                                           pkg)))
                 (when handler
                   (setf (ng:route app url :method method) handler))))))
