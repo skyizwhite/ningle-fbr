@@ -20,7 +20,7 @@ To use ningle-fbr, you must use [package-inferred-system](https://asdf.common-li
 
 `/src/app.lisp`
 ```lisp
-(uiop:define-package #:example
+(defpackage #:example
   (:nicknames #:example/app)
   (:use #:cl)
   (:import-from #:ningle)
@@ -46,7 +46,7 @@ To use ningle-fbr, you must use [package-inferred-system](https://asdf.common-li
 `/src/routes/nested/page.lisp` → `/nested/page`
 
 ```lisp
-(uiop:define-package #:example/routes/index
+(defpackage #:example/routes/index
   (:use #:cl)
   (:export #:handle-get
            #:handle-post
@@ -74,6 +74,20 @@ A file or directory name prefixed with '=' indicates a dynamic path.
 In the example below, the parameter `id` can be obtained from handler's params.
 
 `/src/routes/user/=id.lisp` → `/user/:id`
+
+## Not found error
+
+`not-found.lisp` is a special file to handle 404 errors. Implement `handle-not-found` function and export it.
+
+```lisp
+(defpackage #:example/routes/not-found
+  (:use #:cl)
+  (:export #:handle-not-found))
+(in-package #:example/routes/not-found)
+  
+(defun handle-not-found ()
+  ...)
+```
 
 # License
 
