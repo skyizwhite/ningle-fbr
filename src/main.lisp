@@ -47,7 +47,7 @@
     (mapcar (lambda (pathname)
               (cons (pathname->url pathname dir-namestring)
                     (pathname->package pathname system-path-namestring system-prefix)))
-            (dir->pathnames dir))))
+            (dir->pathnames dir-namestring))))
 
 (defparameter *http-request-methods*
   '(:GET :POST :PUT :DELETE :HEAD :CONNECT :OPTIONS :PATCH))
