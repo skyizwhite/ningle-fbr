@@ -1,0 +1,29 @@
+name: 'test'
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        lisp:
+          - sbcl-bin
+          - ccl-bin
+          
+    env:
+      LISP: ${{ matrix.lisp }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: 40ants/setup-lisp@v4
+        with:
+          asdf-system: ningle-fbr
+      - uses: 40ants/run-tests@v2
+        with:
+          asdf-system: ningle-fbr
