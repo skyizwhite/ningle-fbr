@@ -10,10 +10,6 @@
  (:class qlot/source/ql:source-ql
   :initargs (:%version :latest)
   :version "ql-2023-10-21"))
-("filepaths" .
- (:class qlot/source/github:source-github
-  :initargs (:repos "fosskers/filepaths" :ref nil :branch nil :tag nil)
-  :version "github-758de35a77d011b1fbbc245dae8385a387d733d8"))
 ("rove" .
  (:class qlot/source/github:source-github
   :initargs (:repos "fukamachi/rove" :ref nil :branch nil :tag nil)
