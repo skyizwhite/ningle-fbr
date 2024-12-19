@@ -1,4 +1,5 @@
 (defpackage #:ningle-fbr-test/router
   (:use #:cl
-        #:ningle-fbr/router))
+        #:rove)
+  (:import-from #:ningle-fbr/router))
 (in-package #:ningle-fbr-test/router)
