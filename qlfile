@@ -1,4 +1,5 @@
 ql ningle
 ql cl-ppcre
+ql alexandria
 github rove fukamachi/rove
 github dissect shinmera/dissect

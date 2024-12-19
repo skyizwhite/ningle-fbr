@@ -3,6 +3,8 @@
   (:import-from #:cl-ppcre
                 #:split
                 #:regex-replace)
+  (:import-from #:alexandria
+                #:make-keyword)
   (:export #:path->package))
 (in-package #:ningle-fbr/package-mapper)
 
@@ -23,4 +25,4 @@
          (routes-parts (normalize-path cleaned-routes-dir))
          (path-parts (normalize-path path))
          (all-parts (append (list system) routes-parts path-parts)))
-    (string-upcase (format nil "~{~a~^/~}" all-parts))))
+    (make-keyword (string-upcase (format nil "~{~a~^/~}" all-parts)))))
