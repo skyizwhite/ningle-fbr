@@ -10,13 +10,27 @@ Please check the [release notes](https://github.com/skyizwhite/ningle-fbr/releas
 
 ## What is File-Based Routing?
 
-File-based routing is a concept widely used in modern web frameworks like [Next.js](https://nextjs.org/). Instead of explicitly defining routes in code or configuration, routes are automatically generated based on the file and directory structure within a designated folder (often called "pages" or "routes").
+File-based routing automatically generates URL routes based on a project’s file and directory structure. Instead of manually configuring routes in a separate routing file, each file in a designated directory (e.g., `pages` or `routes`) becomes a route. This simplifies development and maintenance since adding, removing, or renaming a route is often just a matter of modifying a file’s name or location.
 
 ## Usage
 
-To use ningle-fbr, you need to set up your project based on the [package-inferred-system](https://asdf.common-lisp.dev/asdf/The-package_002dinferred_002dsystem-extension.html).
+To use ningle-fbr, set up your project in accordance with the [package-inferred-system](https://asdf.common-lisp.dev/asdf/The-package_002dinferred_002dsystem-extension.html) conventions.
 
-`/example.asd`:
+**Example directory structure**:  
+```
+example.asd
+src/
+  app.lisp
+  routes/
+    index.lisp
+    hello.lisp
+    users/
+      index.lisp
+    nested/
+      page.lisp
+```
+
+**`example.asd`**:
 ```lisp
 (defsystem "example"
   :class :package-inferred-system
@@ -24,14 +38,13 @@ To use ningle-fbr, you need to set up your project based on the [package-inferre
   :depends-on ("example/app"))
 ```
 
-`/src/app.lisp`:
+**`/src/app.lisp`**:
 ```lisp
 (defpackage #:example
   (:nicknames #:example/app)
   (:use #:cl)
   (:import-from #:ningle)
-  (:import-from #:ningle-fbr
-                #:set-routes))
+  (:import-from #:ningle-fbr #:set-routes))
 (in-package #:example/app)
 
 (defparameter *app* (make-instance 'ningle:<app>))
@@ -41,14 +54,14 @@ To use ningle-fbr, you need to set up your project based on the [package-inferre
 
 ### Static Routing
 
-Routes are generated automatically from packages under `:example/routes`:
+Routes are derived from packages under `:example/routes`. The package’s name corresponds directly to a URL path:
 
 - `:example/routes/index` → `/`
 - `:example/routes/hello` → `/hello`
 - `:example/routes/users/index` → `/users`
 - `:example/routes/nested/page` → `/nested/page`
 
-`/src/routes/index.lisp` example:
+**`/src/routes/index.lisp`**:
 ```lisp
 (defpackage #:example/routes/index
   (:use #:cl)
@@ -59,29 +72,36 @@ Routes are generated automatically from packages under `:example/routes`:
 (in-package #:example/routes/index)
 
 (defun handle-get (params)
-  ...)
+  ;; implement GET logic here
+  )
 
 (defun handle-post (params)
-  ...)
+  ;; implement POST logic here
+  )
 
 (defun handle-put (params)
-  ...)
+  ;; implement PUT logic here
+  )
 
 (defun handle-delete (params)
-  ...)
+  ;; implement DELETE logic here
+  )
 ```
+
+Handlers are chosen based on the HTTP method. If `handle-get` is exported, it will be called for `GET` requests on `/`.
 
 ### Dynamic Routing
 
-Dynamic routes use `< >` to indicate parameters. For example:
+To define dynamic routes, use `<>` in the file name to indicate URL parameters.
 
-`/src/routes/user/<id>.lisp` → `/user/:id`
+For example:
+`:example/routes/user/<id>` → `/user/:id`
 
-In the handlers, you can access the value of `id` through the `params` argument.
+If a request comes in at `/user/123`, `params` will include `:id "123"`.
 
-### Not Found Error
+### 404 Handling
 
-`:example/routes/not-found` is a special package for handling 404 errors. Implement and export `handle-not-found`:
+To handle 404 (Not Found) error, create a special package named `:example/routes/not-found` and define `handle-not-found`:
 
 ```lisp
 (defpackage #:example/routes/not-found
@@ -90,7 +110,8 @@ In the handlers, you can access the value of `id` through the `params` argument.
 (in-package #:example/routes/not-found)
 
 (defun handle-not-found ()
-  ...)
+  ;; Implement custom 404 logic here
+  )
 ```
 
 ## License
