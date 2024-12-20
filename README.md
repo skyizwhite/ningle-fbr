@@ -1,16 +1,22 @@
-# ningle-fbr (WIP)
+# ningle-fbr
 
-A utility for [ningle](https://github.com/fukamachi/ningle) and [jingle](https://github.com/dnaeon/cl-jingle) to enable file-based routing.
+A file-based router for [ningle](https://github.com/fukamachi/ningle).
+
+## Warning
+
+This software is still in ALPHA quality. The APIs are likely to change.
+
+Please check the [release notes](https://github.com/skyizwhite/ningle-fbr/releases) for updates.
 
 ## What is File-Based Routing?
 
-File-based routing is a concept commonly used in modern web frameworks such as [Next.js](https://nextjs.org/). Instead of explicitly defining routes through configuration or code, the framework automatically sets up routes based on the file hierarchy of a specific directory (usually the "pages" or "routes" directory).
+File-based routing is a concept widely used in modern web frameworks like [Next.js](https://nextjs.org/). Instead of explicitly defining routes in code or configuration, routes are automatically generated based on the file and directory structure within a designated folder (often called "pages" or "routes").
 
 ## Usage
 
-To use ningle-fbr, you need to use [package-inferred-system](https://asdf.common-lisp.dev/asdf/The-package_002dinferred_002dsystem-extension.html).
+To use ningle-fbr, you need to set up your project based on the [package-inferred-system](https://asdf.common-lisp.dev/asdf/The-package_002dinferred_002dsystem-extension.html).
 
-`/example.asd`
+`/example.asd`:
 ```lisp
 (defsystem "example"
   :class :package-inferred-system
@@ -18,33 +24,31 @@ To use ningle-fbr, you need to use [package-inferred-system](https://asdf.common
   :depends-on ("example/app"))
 ```
 
-`/src/app.lisp`
+`/src/app.lisp`:
 ```lisp
 (defpackage #:example
   (:nicknames #:example/app)
   (:use #:cl)
   (:import-from #:ningle)
   (:import-from #:ningle-fbr
-                #:assign-routes))
+                #:set-routes))
 (in-package #:example/app)
 
 (defparameter *app* (make-instance 'ningle:<app>))
 
-(assign-routes *app*
-               :directory "src/routes"
-               :system "example")
+(set-routes *app* :system :example :target-dir-path "routes")
 ```
 
 ### Static Routing
 
-`/src/routes/index.lisp` → `/`
+Routes are generated automatically from packages under `:example/routes`:
 
-`/src/routes/hello.lisp` → `/hello`
+- `:example/routes/index` → `/`
+- `:example/routes/hello` → `/hello`
+- `:example/routes/users/index` → `/users`
+- `:example/routes/nested/page` → `/nested/page`
 
-`/src/routes/users/index.lisp` → `/users`
-
-`/src/routes/nested/page.lisp` → `/nested/page`
-
+`/src/routes/index.lisp` example:
 ```lisp
 (defpackage #:example/routes/index
   (:use #:cl)
@@ -69,22 +73,22 @@ To use ningle-fbr, you need to use [package-inferred-system](https://asdf.common
 
 ### Dynamic Routing
 
-A file or directory name prefixed with '=' indicates a dynamic path.
+Dynamic routes use square brackets to indicate parameters. For example:
 
-In the example below, the parameter `id` can be obtained from the handler's params.
+`/src/routes/user/[id].lisp` → `/user/[id]`
 
-`/src/routes/user/=id.lisp` → `/user/:id`
+In the handlers, you can access the value of `id` through the `params` argument.
 
 ### Not Found Error
 
-`not-found.lisp` is a special file to handle 404 errors. Implement the `handle-not-found` function and export it.
+`:example/routes/not-found` is a special package for handling 404 errors. Implement and export `handle-not-found`:
 
 ```lisp
 (defpackage #:example/routes/not-found
   (:use #:cl)
   (:export #:handle-not-found))
 (in-package #:example/routes/not-found)
-  
+
 (defun handle-not-found ()
   ...)
 ```
