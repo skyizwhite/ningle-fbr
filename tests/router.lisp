@@ -23,8 +23,8 @@
     (ok (string= (path->uri "/nested/index") "/nested")))
   
   (testing "dynamic path"
-    (ok (string= (path->uri "/user/[id]") "/user/:id"))
-    (ok (string= (path->uri "/location/[country]/[city]") "/location/:country/:city" ))))
+    (ok (string= (path->uri "/user/<id>") "/user/:id"))
+    (ok (string= (path->uri "/location/<country>/<city>") "/location/:country/:city" ))))
 
 (deftest package-test
   (testing "normal case"

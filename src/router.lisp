@@ -34,7 +34,7 @@
       (regex-replace "/index$" path "")))
 
 (defun bracket->colon (path)
-  (regex-replace-all "\\[(.*?)\\]" path ":\\1"))
+  (regex-replace-all "<(.*?)>" path ":\\1"))
 
 (defun path->uri (path)
   (bracket->colon (remove-index path)))

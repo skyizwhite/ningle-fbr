@@ -73,9 +73,9 @@ Routes are generated automatically from packages under `:example/routes`:
 
 ### Dynamic Routing
 
-Dynamic routes use square brackets to indicate parameters. For example:
+Dynamic routes use `< >` to indicate parameters. For example:
 
-`/src/routes/user/[id].lisp` → `/user/[id]`
+`/src/routes/user/<id>.lisp` → `/user/:id`
 
 In the handlers, you can access the value of `id` through the `params` argument.
 
