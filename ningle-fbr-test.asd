@@ -1,7 +1,6 @@
 (defsystem "ningle-fbr-test"
-  :defsystem-depends-on ("fiveam-asdf")
-  :class :package-inferred-fiveam-tester-system
+  :class :package-inferred-system
   :pathname "tests"
-  :depends-on ()
-  :test-names ()
-  :num-checks 0)
+  :depends-on ("rove"
+               "ningle-fbr-test/router")
+  :perform (test-op (o c) (symbol-call :rove :run c :style :dot)))
