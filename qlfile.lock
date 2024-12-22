@@ -6,6 +6,10 @@
  (:class qlot/source/ql:source-ql
   :initargs (:%version :latest)
   :version "ql-2023-10-21"))
+("lack" .
+ (:class qlot/source/ql:source-ql
+  :initargs (:%version :latest)
+  :version "ql-2024-10-12"))
 ("cl-ppcre" .
  (:class qlot/source/ql:source-ql
   :initargs (:%version :latest)

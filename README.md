@@ -26,6 +26,7 @@ src/
     hello.lisp
     users/
       index.lisp
+      <id>.lisp
     nested/
       page.lisp
 ```
