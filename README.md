@@ -4,19 +4,19 @@ A file-based router for [ningle](https://github.com/fukamachi/ningle).
 
 ## Warning
 
-This software is still in ALPHA quality. The APIs are likely to change.
+This software is currently in ALPHA stage. Its APIs are subject to change.  
 
-Please check the [release notes](https://github.com/skyizwhite/ningle-fbr/releases) for updates.
+Check the [release notes](https://github.com/skyizwhite/ningle-fbr/releases) for the latest updates.
 
 ## What is File-Based Routing?
 
-File-based routing automatically generates URL routes based on a project’s file and directory structure. Instead of manually configuring routes in a separate routing file, each file in a designated directory (e.g., `pages` or `routes`) becomes a route. This simplifies development and maintenance since adding, removing, or renaming a route is often just a matter of modifying a file’s name or location.
+File-based routing automatically creates URL routes based on a project’s file and directory structure. Instead of manually configuring routes in a separate routing file, each file in a designated directory (e.g., `pages` or `routes`) becomes a route. This simplifies development and maintenance since adding, removing, or renaming a route is often just a matter of modifying a file’s name or location.
 
 ## Usage
 
-To use ningle-fbr, set up your project in accordance with the [package-inferred-system](https://asdf.common-lisp.dev/asdf/The-package_002dinferred_002dsystem-extension.html) conventions.
+To use ningle-fbr, set up your project using the [package-inferred-system](https://asdf.common-lisp.dev/asdf/The-package_002dinferred_002dsystem-extension.html) style.
 
-**Example directory structure**:  
+**Example directory structure**:
 ```
 example.asd
 src/
@@ -55,7 +55,7 @@ src/
 
 ### Static Routing
 
-Routes are derived from packages under `:example/routes`. The package’s name corresponds directly to a URL path:
+Routes are determined by packages located under `:example/routes`. The package’s name corresponds directly to a URL path:
 
 - `:example/routes/index` → `/`
 - `:example/routes/hello` → `/hello`
@@ -73,19 +73,19 @@ Routes are derived from packages under `:example/routes`. The package’s name c
 (in-package #:example/routes/index)
 
 (defun handle-get (params)
-  ;; implement GET logic here
+  ;; Implement GET logic here
   )
 
 (defun handle-post (params)
-  ;; implement POST logic here
+  ;; Implement POST logic here
   )
 
 (defun handle-put (params)
-  ;; implement PUT logic here
+  ;; Implement PUT logic here
   )
 
 (defun handle-delete (params)
-  ;; implement DELETE logic here
+  ;; Implement DELETE logic here
   )
 ```
 
@@ -102,7 +102,7 @@ If a request comes in at `/user/123`, `params` will include `:id "123"`.
 
 ### 404 Handling
 
-To handle 404 (Not Found) error, create a special package named `:example/routes/not-found` and define `handle-not-found`:
+To handle 404 (Not Found) errors, create a special package named `:example/routes/not-found` and define `handle-not-found`:
 
 ```lisp
 (defpackage #:example/routes/not-found
