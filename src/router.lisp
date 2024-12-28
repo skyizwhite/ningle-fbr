@@ -7,6 +7,7 @@
                 #:regex-replace
                 #:regex-replace-all)
   (:import-from #:ningle)
+	(:import-from #:trivial-system-loader)
   (:export #:pathname->path
            #:path->uri
            #:path-package
@@ -54,7 +55,7 @@
     :for path :in (detect-paths system target-dir-path)
     :for uri := (path->uri path)
     :for pkg := (path->package path system target-dir-path)
-    :do (ql:quickload pkg) 
+    :do (load-system pkg)
         (if (string= uri "/not-found")
             (let ((handler (find-symbol "HANDLE-NOT-FOUND" pkg)))
               (defmethod ningle:not-found ((app ningle:app))
