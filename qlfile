@@ -2,5 +2,6 @@ ql ningle
 ql lack
 ql cl-ppcre
 ql alexandria
+ql trivial-system-loader
 github rove fukamachi/rove
 github dissect shinmera/dissect

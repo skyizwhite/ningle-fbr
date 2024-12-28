@@ -7,7 +7,8 @@
                 #:regex-replace
                 #:regex-replace-all)
   (:import-from #:ningle)
-	(:import-from #:trivial-system-loader)
+  (:import-from #:trivial-system-loader
+                #:load-system)
   (:export #:pathname->path
            #:path->uri
            #:path-package
