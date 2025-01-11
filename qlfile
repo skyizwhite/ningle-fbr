@@ -3,5 +3,6 @@ ql lack
 ql cl-ppcre
 ql alexandria
 ql trivial-system-loader
-github rove fukamachi/rove
-github dissect shinmera/dissect
+
+git rove https://github.com/fukamachi/rove
+git dissect https://github.com/shinmera/dissect
