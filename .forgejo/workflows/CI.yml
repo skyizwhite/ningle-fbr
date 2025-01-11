@@ -1,0 +1,59 @@
+name: 'CI'
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+jobs:
+  test:
+    runs-on: docker
+
+    strategy:
+      matrix:
+        lisp:
+          - sbcl-bin
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Restore cache
+        id: restore-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            /usr/local/bin/ros
+            /usr/local/etc/roswell/
+            ~/.roswell
+            ~/.config/common-lisp/source-registry.conf.d
+            ~/lisp
+            .qlot/
+          key: roswell-${{ runner.os }}-${{ matrix.lisp }}-${{ hashFiles('qlfile.lock', '.forgejo/workflows/CI.yml') }}
+
+      - name: Install dependencies
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        env:
+          LISP: ${{ matrix.lisp }}
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+          ros install fukamachi/qlot
+          PATH="~/.roswell/bin:$PATH"
+          qlot install
+
+      - name: Save cache
+        id: save-cache
+        uses: actions/cache/save@v4
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            /usr/local/bin/ros
+            /usr/local/etc/roswell/
+            ~/.roswell
+            ~/.config/common-lisp/source-registry.conf.d
+            ~/lisp
+            .qlot/
+          key: ${{ steps.restore-cache.outputs.cache-primary-key }}
+
+      - name: Run tests
+        run: .qlot/bin/rove ningle-fbr.asd

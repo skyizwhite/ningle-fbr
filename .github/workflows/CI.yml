@@ -1,0 +1,31 @@
+name: 'CI'
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        lisp:
+          - sbcl-bin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        env:
+          LISP: ${{ matrix.lisp }}
+        run: |
+          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+          ros install fukamachi/qlot
+          PATH="~/.roswell/bin:$PATH"
+          qlot install
+
+      - name: Run tests
+        run: .qlot/bin/rove ningle-fbr.asd
