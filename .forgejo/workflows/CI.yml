@@ -23,13 +23,15 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
+            ~/.quicklisp-client-fix
+            ~/.roswell
             /usr/local/bin/ros
             /usr/local/etc/roswell/
-            ~/.roswell
-            ~/.config/common-lisp/source-registry.conf.d
-            ~/lisp
-            .qlot/
-          key: roswell-${{ runner.os }}-${{ matrix.lisp }}-${{ hashFiles('qlfile.lock', '.forgejo/workflows/CI.yml') }}
+            qlfile
+            qlfile.lock
+            .qlot
+            ~/.cache/common-lisp/
+          key: roswell-${{ runner.os }}-${{ matrix.lisp }}-${{ hashFiles('qlfile', 'qlfile.lock', '*.asd') }}
 
       - name: Install dependencies
         if: steps.restore-cache.outputs.cache-hit != 'true'
@@ -47,12 +49,14 @@ jobs:
         if: steps.restore-cache.outputs.cache-hit != 'true'
         with:
           path: |
+            ~/.quicklisp-client-fix
+            ~/.roswell
             /usr/local/bin/ros
             /usr/local/etc/roswell/
-            ~/.roswell
-            ~/.config/common-lisp/source-registry.conf.d
-            ~/lisp
-            .qlot/
+            qlfile
+            qlfile.lock
+            .qlot
+            ~/.cache/common-lisp/
           key: ${{ steps.restore-cache.outputs.cache-primary-key }}
 
       - name: Run tests
