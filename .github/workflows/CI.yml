@@ -14,18 +14,16 @@ jobs:
       matrix:
         lisp:
           - sbcl-bin
+          - ccl-bin
+
+    env:
+      LISP: ${{ matrix.lisp }}
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install dependencies
-        env:
-          LISP: ${{ matrix.lisp }}
-        run: |
-          curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
-          ros install fukamachi/qlot
-          PATH="~/.roswell/bin:$PATH"
-          qlot install
-
-      - name: Run tests
-        run: .qlot/bin/rove ningle-fbr.asd
+      - uses: 40ants/setup-lisp@v4
+        with:
+          asdf-system: ningle-fbr
+      - uses: 40ants/run-tests@v2
+        with:
+          asdf-system: ningle-fbr
