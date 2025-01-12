@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Restore cache
         id: restore-cache
         uses: actions/cache/restore@v4
@@ -31,17 +31,26 @@ jobs:
             qlfile.lock
             .qlot
             ~/.cache/common-lisp/
-          key: roswell-${{ runner.os }}-${{ matrix.lisp }}-${{ hashFiles('qlfile', 'qlfile.lock', '*.asd') }}
+          key: roswell-${{ runner.os }}-${{ matrix.lisp }}-${{ hashFiles('qlfile', 'qlfile.lock', '*.asd', '.forgejo/workflows/ci.yml') }}
 
-      - name: Install dependencies
+      - name: Install Roswell
         if: steps.restore-cache.outputs.cache-hit != 'true'
         env:
           LISP: ${{ matrix.lisp }}
         run: |
           curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+
+      - name: Install Qlot
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        run: |
           ros install fukamachi/qlot
+
+      - name: Install dependencies
+        if: steps.restore-cache.outputs.cache-hit != 'true'
+        run: |
           PATH="~/.roswell/bin:$PATH"
           qlot install
+          qlot exec ros install ningle-fbr
 
       - name: Save cache
         id: save-cache
