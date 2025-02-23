@@ -3,8 +3,8 @@
   :description "File-based router for Ningle"
   :long-description #.(uiop:read-file-string
                        (uiop:subpathname *load-pathname* "README.md"))
-  :author "skyizwhite"
-  :maintainer "skyizwhite <paku@skyizwhite.dev>"
+  :author "Akira Tempaku"
+  :maintainer "Akira Tempaku <paku@skyizwhite.dev>"
   :license "MIT"
   :class :package-inferred-system
   :pathname "src"

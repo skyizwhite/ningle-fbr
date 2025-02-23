@@ -119,4 +119,4 @@ To handle 404 (Not Found) errors, create a special package named `:example/route
 
 Licensed under the MIT License.
 
-© 2024, skyizwhite.
+© 2024 Akira Tempaku
