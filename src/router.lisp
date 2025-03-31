@@ -7,6 +7,8 @@
                 #:regex-replace
                 #:regex-replace-all)
   (:import-from #:ningle)
+  (:import-from #:lack/response
+                #:response-status)
   (:import-from #:trivial-system-loader
                 #:load-system)
   (:export #:pathname->path
@@ -60,6 +62,7 @@
         (if (string= uri "/not-found")
             (let ((handler (find-symbol "HANDLE-NOT-FOUND" pkg)))
               (defmethod ningle:not-found ((app ningle:app))
+                (setf (response-status ningle:*response*) 404)
                 (funcall handler))))
         (loop
           :for method :in *http-request-methods*
