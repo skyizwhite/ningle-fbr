@@ -14,6 +14,8 @@ File-based routing automatically creates URL routes based on a project’s file 
 
 ## Usage
 
+[Practical usage example](https://github.com/skyizwhite/website)
+
 To use ningle-fbr, set up your project using the [package-inferred-system](https://asdf.common-lisp.dev/asdf/The-package_002dinferred_002dsystem-extension.html) style.
 
 **Example directory structure**:
