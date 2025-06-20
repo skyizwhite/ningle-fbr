@@ -1,5 +1,5 @@
 (defsystem "ningle-fbr"
-  :version "0.1.0"
+  :version "0.1.2"
   :description "File-based router for Ningle"
   :long-description #.(uiop:read-file-string
                        (uiop:subpathname *load-pathname* "README.md"))
