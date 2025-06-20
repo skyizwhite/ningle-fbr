@@ -61,7 +61,7 @@
     :do (load-system pkg)
         (if (string= uri "/not-found")
             (let ((handler (find-symbol "HANDLE-NOT-FOUND" pkg)))
-              (defmethod ningle:not-found ((app ningle:app))
+              (defmethod ningle:not-found ((app (eql app)))
                 (setf (response-status ningle:*response*) 404)
                 (funcall handler))))
         (loop
