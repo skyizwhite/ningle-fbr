@@ -1,7 +1,7 @@
 (defpackage #:ningle-fbr-test/routes/not-found
   (:use #:cl)
-  (:export #:handle-not-found))
+  (:export #:@not-found))
 (in-package #:ningle-fbr-test/routes/not-found)
 
-(defun handle-not-found ()
+(defun @not-found ()
   "Not Found")

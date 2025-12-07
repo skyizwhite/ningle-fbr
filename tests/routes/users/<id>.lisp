@@ -1,8 +1,8 @@
 (defpackage #:ningle-fbr-test/routes/users/<id>
   (:use #:cl)
-  (:export #:handle-get))
+  (:export #:@get))
 (in-package #:ningle-fbr-test/routes/users/<id>)
 
-(defun handle-get (params)
+(defun @get (params)
   (let ((id (cdr (assoc :id params))))
     id))

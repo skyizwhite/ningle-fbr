@@ -58,13 +58,14 @@
     :for pkg := (path->package path system dir)
     :do (load-system pkg)
         (if (string= uri "/not-found")
-            (let ((handler (find-symbol "HANDLE-NOT-FOUND" pkg)))
+            (let ((handler (find-symbol "@NOT-FOUND" pkg)))
               (defmethod ningle:not-found ((app (eql app)))
                 (setf (response-status ningle:*response*) 404)
                 (funcall handler))))
         (loop
           :for method :in *http-request-methods*
-          :do (let ((handler (find-symbol (concatenate 'string "HANDLE-" (string method))
+          :do (let ((handler (find-symbol (concatenate 'string "@" (string method))
                                           pkg)))
                 (when handler
                   (setf (ningle:route app uri :method method) handler))))))
+

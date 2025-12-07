@@ -47,12 +47,13 @@ src/
   (:nicknames #:example/app)
   (:use #:cl)
   (:import-from #:ningle)
-  (:import-from #:ningle-fbr #:set-routes))
+  (:import-from #:ningle-fbr
+                #:set-routes))
 (in-package #:example/app)
 
 (defparameter *app* (make-instance 'ningle:<app>))
 
-(set-routes *app* :system :example :target-dir-path "routes")
+(set-routes *app* :system :example :dir "routes")
 ```
 
 ### Static Routing
@@ -68,30 +69,30 @@ Routes are determined by packages located under `:example/routes`. The packageâ€
 ```lisp
 (defpackage #:example/routes/index
   (:use #:cl)
-  (:export #:handle-get
-           #:handle-post
-           #:handle-put
-           #:handle-delete))
+  (:export #:@get
+           #:@post
+           #:@put
+           #:@delete))
 (in-package #:example/routes/index)
 
-(defun handle-get (params)
+(defun @get (params)
   ;; Implement GET logic here
   )
 
-(defun handle-post (params)
+(defun @post (params)
   ;; Implement POST logic here
   )
 
-(defun handle-put (params)
+(defun @put (params)
   ;; Implement PUT logic here
   )
 
-(defun handle-delete (params)
+(defun @delete (params)
   ;; Implement DELETE logic here
   )
 ```
 
-Handlers are chosen based on the HTTP method. If `handle-get` is exported, it will be called for `GET` requests on `/`.
+Handlers are chosen based on the HTTP method. If `@get` is exported, it will be called for `GET` requests on `/`.
 
 ### Dynamic Routing
 
@@ -104,16 +105,16 @@ If a request comes in at `/user/123`, `params` will include `:id "123"`.
 
 ### 404 Handling
 
-To handle 404 (Not Found) errors, create a special package named `:example/routes/not-found` and define `handle-not-found`:
+To handle 404 (Not Found) errors, create a special package named `:example/routes/not-found` and define `@not-found` function:
 
 ```lisp
 (defpackage #:example/routes/not-found
   (:use #:cl)
-  (:export #:handle-not-found))
+  (:export #:@not-found))
 (in-package #:example/routes/not-found)
 
-(defun handle-not-found ()
-  ;; Implement custom 404 logic here
+(defun @not-found ()
+  ;; Implement custom logic here
   )
 ```
 

@@ -1,8 +1,8 @@
 (defpackage #:ningle-fbr-test/routes/hello
   (:use #:cl)
-  (:export #:handle-get))
+  (:export #:@get))
 (in-package #:ningle-fbr-test/routes/hello)
 
-(defun handle-get (params)
+(defun @get (params)
   (declare (ignore params))
   "ok")
