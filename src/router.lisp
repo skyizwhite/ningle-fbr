@@ -17,20 +17,18 @@
            #:set-routes))
 (in-package #:ningle-fbr/router)
 
-(defun pathname->path (pathname target-dir-pathname)
+(defun pathname->path (pathname dir-pathname)
   (let* ((full (namestring pathname))
-         (prefix (quote-meta-chars (namestring target-dir-pathname))))
+         (prefix (quote-meta-chars (namestring dir-pathname))))
     (regex-replace (format nil "^~A(.*?).lisp$" prefix) full "/\\1")))
 
-(defun detect-paths (system target-dir-path)
-  (let ((target-dir-pathname
-          (merge-pathnames (concatenate 'string
-                                        target-dir-path
-                                        "/")
+(defun detect-paths (system dir)
+  (let ((dir-pathname
+          (merge-pathnames (concatenate 'string dir "/")
                            (asdf:component-pathname (asdf:find-system system)))))
     (mapcar (lambda (pathname)
-              (pathname->path pathname target-dir-pathname))
-            (directory (merge-pathnames "**/*.lisp" target-dir-pathname)))))
+              (pathname->path pathname dir-pathname))
+            (directory (merge-pathnames "**/*.lisp" dir-pathname)))))
 
 (defun remove-index (path)
   (if (string= path "/index")
@@ -43,21 +41,21 @@
 (defun path->uri (path)
   (bracket->colon (remove-index path)))
 
-(defun path->package (path system target-dir-path)
+(defun path->package (path system dir)
   (make-keyword (string-upcase (concatenate 'string
                                             (string system)
                                             "/"
-                                            target-dir-path
+                                            dir
                                             path))))
 
 (defparameter *http-request-methods*
   '(:GET :POST :PUT :DELETE :HEAD :CONNECT :OPTIONS :PATCH))
 
-(defmethod set-routes ((app ningle:app) &key system target-dir-path)
+(defmethod set-routes ((app ningle:app) &key system dir)
   (loop
-    :for path :in (detect-paths system target-dir-path)
+    :for path :in (detect-paths system dir)
     :for uri := (path->uri path)
-    :for pkg := (path->package path system target-dir-path)
+    :for pkg := (path->package path system dir)
     :do (load-system pkg)
         (if (string= uri "/not-found")
             (let ((handler (find-symbol "HANDLE-NOT-FOUND" pkg)))

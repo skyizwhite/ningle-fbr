@@ -43,7 +43,7 @@
     (testing-app (let ((app (make-instance 'ningle:app)))
                    (set-routes app
                                :system :ningle-fbr-test
-                               :target-dir-path "routes")
+                               :dir "routes")
                    (lack:builder app))
       (multiple-value-bind (body status headers)
           (request "/")
