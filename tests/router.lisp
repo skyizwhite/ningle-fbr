@@ -78,6 +78,40 @@
       (multiple-value-bind (body status headers)
           (request "/missing")
         (declare (ignore headers))
-        (ok (string= body "Not Found"))
+        (ok (string= body "custom-not-found"))
         (ok (eql status 404))))))
+
+(defmacro with-empty-package ((var) &body body)
+  "Bind VAR to a freshly interned, empty package and delete it afterwards."
+  `(let ((,var (make-package (gensym "FBR-TEST-EMPTY-PKG-") :use nil)))
+     (unwind-protect (progn ,@body)
+       (delete-package ,var))))
+
+(deftest install-not-found-handler-test
+  (testing "signals an error when @not-found is not interned in the package"
+    (with-empty-package (pkg)
+      (let ((app (make-instance 'ningle:app)))
+        (ok (signals
+                (ningle-fbr/router::install-not-found-handler app pkg)
+                'error))))))
+
+(deftest install-method-handlers-test
+  (testing "warns when no @GET/@POST/... handler is interned"
+    (with-empty-package (pkg)
+      (let ((app (make-instance 'ningle:app)))
+        (ok (signals
+                (ningle-fbr/router::install-method-handlers app "/empty" pkg)
+                'warning)))))
+
+  (testing "does not warn when at least one handler is interned"
+    (with-empty-package (pkg)
+      (let* ((app (make-instance 'ningle:app))
+             (sym (intern "@GET" pkg)))
+        (setf (symbol-function sym)
+              (lambda (params) (declare (ignore params)) "ok"))
+        (ok (handler-case
+                (progn
+                  (ningle-fbr/router::install-method-handlers app "/has-handler" pkg)
+                  t)
+              (warning () nil)))))))
 

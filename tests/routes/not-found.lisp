@@ -4,4 +4,4 @@
 (in-package #:ningle-fbr-test/routes/not-found)
 
 (defun @not-found ()
-  "Not Found")
+  "custom-not-found")
