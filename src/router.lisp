@@ -69,11 +69,19 @@ before parametric ones at the same depth."
 (defparameter *http-request-methods*
   '(:GET :POST :PUT :DELETE :HEAD :CONNECT :OPTIONS :PATCH :TRACE))
 
+(defun find-exported-symbol (name pkg)
+  (multiple-value-bind (symbol status) (find-symbol name pkg)
+    (and (eq status :external) symbol)))
+
 (defun install-not-found-handler (app pkg)
-  (let ((handler (find-symbol "@NOT-FOUND" pkg)))
+  (let ((handler (find-exported-symbol "@NOT-FOUND" pkg)))
     (unless handler
-      (error "Package ~A is mapped to /not-found but defines no @NOT-FOUND ~
-              symbol. Did you forget to (:export #:@not-found)?" pkg))
+      (error "Package ~A is mapped to /not-found but does not export an ~
+              @NOT-FOUND symbol. Did you forget to (:export #:@not-found)?"
+             pkg))
+    (unless (fboundp handler)
+      (error "Package ~A exports @NOT-FOUND but it has no function definition."
+             pkg))
     (defmethod ningle:not-found ((current-app (eql app)))
       (declare (ignore current-app))
       (setf (response-status ningle:*response*) 404)
@@ -82,15 +90,19 @@ before parametric ones at the same depth."
 (defun install-method-handlers (app uri pkg)
   (let ((registered 0))
     (dolist (method *http-request-methods*)
-      (let ((handler (find-symbol (concatenate 'string "@" (string method))
-                                  pkg)))
+      (let ((handler (find-exported-symbol (concatenate 'string "@" (string method))
+                                           pkg)))
         (when handler
+          (unless (fboundp handler)
+            (error "Package ~A (URI ~A) exports ~A but it has no function ~
+                    definition."
+                   pkg uri handler))
           (setf (ningle:route app uri :method method) handler)
           (incf registered))))
     (when (zerop registered)
-      (warn "Route package ~A (URI ~A) exports no handler. ~
-             Expected at least one of @GET, @POST, @PUT, @DELETE, …"
-            pkg uri))))
+      (error "Route package ~A (URI ~A) exports no handler. ~
+              Expected at least one of @GET, @POST, @PUT, @DELETE, …"
+             pkg uri))))
 
 (defmethod set-routes ((app ningle:app) &key system dir)
   (loop

@@ -88,30 +88,68 @@
        (delete-package ,var))))
 
 (deftest install-not-found-handler-test
-  (testing "signals an error when @not-found is not interned in the package"
+  (testing "signals an error when @not-found is not exported from the package"
     (with-empty-package (pkg)
       (let ((app (make-instance 'ningle:app)))
+        (ok (signals
+                (ningle-fbr/router::install-not-found-handler app pkg)
+                'error)))))
+
+  (testing "signals an error when @not-found is interned but not exported"
+    (with-empty-package (pkg)
+      (let* ((app (make-instance 'ningle:app))
+             (sym (intern "@NOT-FOUND" pkg)))
+        (setf (symbol-function sym) (lambda () "nope"))
+        (ok (signals
+                (ningle-fbr/router::install-not-found-handler app pkg)
+                'error)))))
+
+  (testing "signals an error when @not-found is exported but has no function definition"
+    (with-empty-package (pkg)
+      (let* ((app (make-instance 'ningle:app))
+             (sym (intern "@NOT-FOUND" pkg)))
+        (export sym pkg)
         (ok (signals
                 (ningle-fbr/router::install-not-found-handler app pkg)
                 'error))))))
 
 (deftest install-method-handlers-test
-  (testing "warns when no @GET/@POST/... handler is interned"
+  (testing "signals an error when no @GET/@POST/... handler is exported"
     (with-empty-package (pkg)
       (let ((app (make-instance 'ningle:app)))
         (ok (signals
                 (ningle-fbr/router::install-method-handlers app "/empty" pkg)
-                'warning)))))
+                'error)))))
 
-  (testing "does not warn when at least one handler is interned"
+  (testing "signals an error when a handler is interned but not exported"
     (with-empty-package (pkg)
       (let* ((app (make-instance 'ningle:app))
              (sym (intern "@GET" pkg)))
         (setf (symbol-function sym)
               (lambda (params) (declare (ignore params)) "ok"))
+        (ok (signals
+                (ningle-fbr/router::install-method-handlers app "/internal" pkg)
+                'error)))))
+
+  (testing "signals an error when a handler is exported but has no function definition"
+    (with-empty-package (pkg)
+      (let* ((app (make-instance 'ningle:app))
+             (sym (intern "@GET" pkg)))
+        (export sym pkg)
+        (ok (signals
+                (ningle-fbr/router::install-method-handlers app "/unbound" pkg)
+                'error)))))
+
+  (testing "does not signal when at least one handler is exported and fboundp"
+    (with-empty-package (pkg)
+      (let* ((app (make-instance 'ningle:app))
+             (sym (intern "@GET" pkg)))
+        (setf (symbol-function sym)
+              (lambda (params) (declare (ignore params)) "ok"))
+        (export sym pkg)
         (ok (handler-case
                 (progn
                   (ningle-fbr/router::install-method-handlers app "/has-handler" pkg)
                   t)
-              (warning () nil)))))))
+              (error () nil)))))))
 
