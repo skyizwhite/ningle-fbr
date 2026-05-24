@@ -2,10 +2,6 @@
 
 A file-based router for [ningle](https://github.com/fukamachi/ningle).
 
-## Warning
-
-This software is currently in ALPHA stage. Its APIs are subject to change.  
-
 Check the [release notes](https://github.com/skyizwhite/ningle-fbr/releases) for the latest updates.
 
 ## What is File-Based Routing?
