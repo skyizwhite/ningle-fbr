@@ -202,7 +202,9 @@
     (with-empty-package (pkg)
       (let ((app (make-instance 'ningle:app)))
         (ok (signals
-                (ningle-fbr/router::install-method-handlers app "/empty" pkg)
+                (ningle-fbr/router::install-method-handlers
+                 app "/empty" pkg
+                 (ningle-fbr/router::exported-http-methods pkg))
                 'missing-method-handlers)))))
 
   (testing "signals MISSING-METHOD-HANDLERS when a handler is interned but not exported"
@@ -212,7 +214,9 @@
         (setf (symbol-function sym)
               (lambda (params) (declare (ignore params)) "ok"))
         (ok (signals
-                (ningle-fbr/router::install-method-handlers app "/internal" pkg)
+                (ningle-fbr/router::install-method-handlers
+                 app "/internal" pkg
+                 (ningle-fbr/router::exported-http-methods pkg))
                 'missing-method-handlers)))))
 
   (testing "signals UNBOUND-ROUTE-HANDLER when a handler is exported but has no function definition"
@@ -221,7 +225,9 @@
              (sym (intern "@GET" pkg)))
         (export sym pkg)
         (ok (signals
-                (ningle-fbr/router::install-method-handlers app "/unbound" pkg)
+                (ningle-fbr/router::install-method-handlers
+                 app "/unbound" pkg
+                 (ningle-fbr/router::exported-http-methods pkg))
                 'unbound-route-handler)))))
 
   (testing "does not signal when at least one handler is exported and fboundp"
@@ -233,7 +239,9 @@
         (export sym pkg)
         (ok (handler-case
                 (progn
-                  (ningle-fbr/router::install-method-handlers app "/has-handler" pkg)
+                  (ningle-fbr/router::install-method-handlers
+                   app "/has-handler" pkg
+                   (ningle-fbr/router::exported-http-methods pkg))
                   t)
               (error () nil)))))))
 

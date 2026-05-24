@@ -285,42 +285,23 @@ UNBOUND-ROUTE-HANDLER if it is exported but has no function binding."
       (setf (response-status ningle:*response*) 404)
       (funcall handler))))
 
-(defun install-method-handlers (app uri pkg)
-  "Register every @METHOD handler exported by PKG as a route on APP at URI.
-Signals UNBOUND-ROUTE-HANDLER if an exported handler symbol has no function
-binding, and MISSING-METHOD-HANDLERS if PKG exports no recognised handler
-at all."
-  (let ((registered-count 0))
-    (dolist (method *http-request-methods*)
-      (let ((handler (find-exported-symbol (concatenate 'string "@" (string method))
-                                           pkg)))
-        (when handler
-          (unless (fboundp handler)
-            (error 'unbound-route-handler
-                   :package pkg :uri uri :handler handler))
-          (setf (ningle:route app uri :method method) handler)
-          (incf registered-count))))
-    (when (zerop registered-count)
-      (error 'missing-method-handlers :package pkg :uri uri))))
-
-(defmethod set-routes ((app ningle:app) &key system dir)
-  "Discover every route file under DIR (relative to ASDF SYSTEM's source
-root), load its package, and install its handlers onto APP. Routes are
-registered in specificity order — static before dynamic before catch-all —
-so myway's first-match dispatch favours the more specific route. The
-package named SYSTEM/DIR/not-found, if present, is installed as the custom
-404 handler instead. Signals a ROUTE-DEFINITION-ERROR subclass on
-conflicts, missing handlers, or unbound handler symbols."
-  (let ((paths (discover-route-paths system dir)))
-    (check-route-conflicts paths)
-    (loop
-      :for path :in paths
-      :for uri := (path->uri path)
-      :for pkg := (path->package path system dir)
-      :do (ensure-route-package-loaded pkg)
-          (if (string= uri "/not-found")
-              (install-not-found-handler app pkg)
-              (install-method-handlers app uri pkg)))))
+(defun install-method-handlers (app uri pkg methods)
+  "Register the @METHOD handler exported by PKG for each keyword in METHODS as
+a route on APP at URI. METHODS is the list already produced by
+EXPORTED-HTTP-METHODS / LIST-ROUTES, so this function neither rescans the
+package nor consults *HTTP-REQUEST-METHODS*. Signals MISSING-METHOD-HANDLERS
+if METHODS is empty, and UNBOUND-ROUTE-HANDLER if an exported handler symbol
+has no function binding."
+  (when (null methods)
+    (error 'missing-method-handlers :package pkg :uri uri))
+  (dolist (method methods)
+    (let ((handler (find-exported-symbol
+                    (cdr (assoc method *http-method-handler-names*))
+                    pkg)))
+      (unless (fboundp handler)
+        (error 'unbound-route-handler
+               :package pkg :uri uri :handler handler))
+      (setf (ningle:route app uri :method method) handler))))
 
 (defun list-routes (&key system dir)
   "Return one plist per detected route under SYSTEM and DIR. Keys: :PATH,
@@ -342,3 +323,20 @@ same side effect as SET-ROUTES, minus installation into an app."
                                      (when (find-exported-symbol "@NOT-FOUND" pkg)
                                        '(:not-found))
                                      (exported-http-methods pkg))))))
+
+(defmethod set-routes ((app ningle:app) &key system dir)
+  "Discover every route file under DIR (relative to ASDF SYSTEM's source
+root) via LIST-ROUTES, then install each entry onto APP. Routes are
+installed in the order LIST-ROUTES returns them — static before dynamic
+before catch-all — so myway's first-match dispatch favours the more
+specific route. The route classified as :NOT-FOUND is installed as the
+custom 404 handler instead. Signals a ROUTE-DEFINITION-ERROR subclass on
+conflicts, missing handlers, or unbound handler symbols."
+  (dolist (route (list-routes :system system :dir dir))
+    (let ((pkg (getf route :package)))
+      (if (eq (getf route :kind) :not-found)
+          (install-not-found-handler app pkg)
+          (install-method-handlers app
+                                   (getf route :uri)
+                                   pkg
+                                   (getf route :methods))))))
