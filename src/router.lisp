@@ -127,6 +127,23 @@ in this list, a handler is looked up as the external symbol named \"@M\"
 (e.g. @GET, @POST). New methods can be added here without touching the
 installation logic.")
 
+(defparameter *http-method-handler-names*
+  (mapcar (lambda (method)
+            (cons method (concatenate 'string "@" (string method))))
+          *http-request-methods*)
+  "Precomputed (METHOD . \"@METHOD\") pairs so EXPORTED-HTTP-METHODS doesn't
+reallocate the lookup strings on every route.")
+
+(defun ensure-route-package-loaded (pkg)
+  "Call LOAD-SYSTEM on PKG only when its package isn't already interned. Route
+packages are package-inferred-system sub-systems, so LOAD-SYSTEM walks the
+ASDF graph and re-checks file timestamps even when the system is fully
+loaded — that's the dominant cost of LIST-ROUTES / SET-ROUTES on warm calls.
+The presence of the package is a sufficient proxy for \"its handlers are
+introspectable\", which is all both callers actually need."
+  (unless (find-package pkg)
+    (load-system pkg)))
+
 (defun find-exported-symbol (name pkg)
   "Return the symbol named NAME in PKG only if it is exported, otherwise NIL.
 Used so we never install handlers that aren't part of a route package's
@@ -138,8 +155,8 @@ public interface — interned-but-not-exported symbols are treated as absent."
   "List the HTTP method keywords for which PKG exports a handler symbol
 (\"@GET\", \"@POST\", …). The order of the returned list mirrors
 *HTTP-REQUEST-METHODS*."
-  (loop for method in *http-request-methods*
-        when (find-exported-symbol (concatenate 'string "@" (string method)) pkg)
+  (loop for (method . handler-name) in *http-method-handler-names*
+        when (find-exported-symbol handler-name pkg)
           collect method))
 
 (define-condition route-definition-error (error) ()
@@ -300,7 +317,7 @@ conflicts, missing handlers, or unbound handler symbols."
       :for path :in paths
       :for uri := (path->uri path)
       :for pkg := (path->package path system dir)
-      :do (load-system pkg)
+      :do (ensure-route-package-loaded pkg)
           (if (string= uri "/not-found")
               (install-not-found-handler app pkg)
               (install-method-handlers app uri pkg)))))
@@ -316,7 +333,7 @@ same side effect as SET-ROUTES, minus installation into an app."
     (loop for path in paths
           for uri = (path->uri path)
           for pkg = (path->package path system dir)
-          do (load-system pkg)
+          do (ensure-route-package-loaded pkg)
           collect (list :path path
                         :uri uri
                         :package pkg
