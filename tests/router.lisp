@@ -14,7 +14,10 @@
                 #:set-routes
                 #:list-routes
                 #:route-conflict-error
-                #:route-conflict-error-conflicts))
+                #:route-conflict-error-conflicts
+                #:missing-not-found-handler
+                #:missing-method-handlers
+                #:unbound-route-handler))
 (in-package #:ningle-fbr-test/router)
 
 (deftest uri-test
@@ -169,40 +172,40 @@
        (delete-package ,var))))
 
 (deftest install-not-found-handler-test
-  (testing "signals an error when @not-found is not exported from the package"
+  (testing "signals MISSING-NOT-FOUND-HANDLER when @not-found is not exported"
     (with-empty-package (pkg)
       (let ((app (make-instance 'ningle:app)))
         (ok (signals
                 (ningle-fbr/router::install-not-found-handler app pkg)
-                'error)))))
+                'missing-not-found-handler)))))
 
-  (testing "signals an error when @not-found is interned but not exported"
+  (testing "signals MISSING-NOT-FOUND-HANDLER when @not-found is interned but not exported"
     (with-empty-package (pkg)
       (let* ((app (make-instance 'ningle:app))
              (sym (intern "@NOT-FOUND" pkg)))
         (setf (symbol-function sym) (lambda () "nope"))
         (ok (signals
                 (ningle-fbr/router::install-not-found-handler app pkg)
-                'error)))))
+                'missing-not-found-handler)))))
 
-  (testing "signals an error when @not-found is exported but has no function definition"
+  (testing "signals UNBOUND-ROUTE-HANDLER when @not-found is exported but has no function definition"
     (with-empty-package (pkg)
       (let* ((app (make-instance 'ningle:app))
              (sym (intern "@NOT-FOUND" pkg)))
         (export sym pkg)
         (ok (signals
                 (ningle-fbr/router::install-not-found-handler app pkg)
-                'error))))))
+                'unbound-route-handler))))))
 
 (deftest install-method-handlers-test
-  (testing "signals an error when no @GET/@POST/... handler is exported"
+  (testing "signals MISSING-METHOD-HANDLERS when no @GET/@POST/... handler is exported"
     (with-empty-package (pkg)
       (let ((app (make-instance 'ningle:app)))
         (ok (signals
                 (ningle-fbr/router::install-method-handlers app "/empty" pkg)
-                'error)))))
+                'missing-method-handlers)))))
 
-  (testing "signals an error when a handler is interned but not exported"
+  (testing "signals MISSING-METHOD-HANDLERS when a handler is interned but not exported"
     (with-empty-package (pkg)
       (let* ((app (make-instance 'ningle:app))
              (sym (intern "@GET" pkg)))
@@ -210,16 +213,16 @@
               (lambda (params) (declare (ignore params)) "ok"))
         (ok (signals
                 (ningle-fbr/router::install-method-handlers app "/internal" pkg)
-                'error)))))
+                'missing-method-handlers)))))
 
-  (testing "signals an error when a handler is exported but has no function definition"
+  (testing "signals UNBOUND-ROUTE-HANDLER when a handler is exported but has no function definition"
     (with-empty-package (pkg)
       (let* ((app (make-instance 'ningle:app))
              (sym (intern "@GET" pkg)))
         (export sym pkg)
         (ok (signals
                 (ningle-fbr/router::install-method-handlers app "/unbound" pkg)
-                'error)))))
+                'unbound-route-handler)))))
 
   (testing "does not signal when at least one handler is exported and fboundp"
     (with-empty-package (pkg)

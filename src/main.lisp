@@ -3,7 +3,5 @@
   (:use #:cl
         #:ningle-fbr/router)
   (:export #:set-routes
-           #:list-routes
-           #:route-conflict-error
-           #:route-conflict-error-conflicts))
+           #:list-routes))
 (in-package :ningle-fbr)
