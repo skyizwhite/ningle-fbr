@@ -101,9 +101,9 @@ Handlers are chosen based on the HTTP method. If `@get` is exported, it will be 
 To define dynamic routes, use `<>` in the file name to indicate URL parameters.
 
 For example:
-`:example/routes/user/<id>` → `/user/:id`
+`:example/routes/users/<id>` → `/users/:id`
 
-If a request comes in at `/user/123`, `params` will include `:id "123"`.
+If a request comes in at `/users/123`, `params` will include `:id "123"`.
 
 ### Catch-all (Splat) Routes
 
@@ -128,10 +128,6 @@ A request to `/docs/intro/getting-started` invokes this route with
   (let ((rest (first (cdr (assoc :splat params)))))
     (format nil "doc: ~A" rest)))
 ```
-
-Precedence is static → dynamic → catch-all, so more-specific files (e.g.
-`docs/index.lisp`, `docs/<slug>.lisp`) win over `docs/<...>.lisp` when they
-also match.
 
 ### 404 Handling
 
@@ -169,7 +165,7 @@ what gets registered.
 
 ### Route Conflict Detection
 
-Both `set-routes` and `list-routes` signal `ningle-fbr:route-conflict-error`
+Both `set-routes` and `list-routes` signal `ningle-fbr/router:route-conflict-error`
 when two files would match the same set of incoming requests — for example
 `users/<id>.lisp` and `users/<name>.lisp`, or `users.lisp` and
 `users/index.lisp`. The condition exposes `route-conflict-error-conflicts`, an
