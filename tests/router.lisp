@@ -9,8 +9,12 @@
   (:import-from #:ningle-fbr/router
                 #:path->uri
                 #:path->package
+                #:path-kind
                 #:pathname->path
-                #:set-routes))
+                #:set-routes
+                #:list-routes
+                #:route-conflict-error
+                #:route-conflict-error-conflicts))
 (in-package #:ningle-fbr-test/router)
 
 (deftest uri-test
@@ -24,7 +28,19 @@
   
   (testing "dynamic path"
     (ok (string= (path->uri "/user/<id>") "/user/:id"))
-    (ok (string= (path->uri "/location/<country>/<city>") "/location/:country/:city"))))
+    (ok (string= (path->uri "/location/<country>/<city>") "/location/:country/:city")))
+
+  (testing "catch-all path"
+    (ok (string= (path->uri "/docs/<...>") "/docs/*"))
+    (ok (string= (path->uri "/docs/<...slug>") "/docs/*"))
+    (ok (string= (path->uri "/<...>") "/*"))
+    (ok (string= (path->uri "/<id>/<...rest>") "/:id/*"))))
+
+(deftest path-kind-test
+  (ok (eq (path-kind "/index" "/") :static))
+  (ok (eq (path-kind "/users/<id>" "/users/:id") :dynamic))
+  (ok (eq (path-kind "/docs/<...>" "/docs/*") :catch-all))
+  (ok (eq (path-kind "/not-found" "/not-found") :not-found)))
 
 (deftest package-test
   (testing "normal case"
@@ -74,12 +90,77 @@
         (declare (ignore headers))
         (ok (string= body "bob"))
         (ok (eql status 200)))
-      
+
+      (multiple-value-bind (body status headers)
+          (request "/docs/intro/getting-started")
+        (declare (ignore headers))
+        (ok (string= body "splat=intro/getting-started"))
+        (ok (eql status 200)))
+
       (multiple-value-bind (body status headers)
           (request "/missing")
         (declare (ignore headers))
         (ok (string= body "custom-not-found"))
         (ok (eql status 404))))))
+
+(deftest list-routes-test
+  (let ((routes (list-routes :system :ningle-fbr-test :dir "routes")))
+    (testing "every detected route is reported"
+      (ok (find "/" routes :key (lambda (r) (getf r :uri)) :test #'string=))
+      (ok (find "/hello" routes :key (lambda (r) (getf r :uri)) :test #'string=))
+      (ok (find "/users" routes :key (lambda (r) (getf r :uri)) :test #'string=))
+      (ok (find "/users/:id" routes :key (lambda (r) (getf r :uri)) :test #'string=))
+      (ok (find "/docs/*" routes :key (lambda (r) (getf r :uri)) :test #'string=))
+      (ok (find "/not-found" routes :key (lambda (r) (getf r :uri)) :test #'string=)))
+
+    (testing "kinds are classified"
+      (ok (eq (getf (find "/" routes :key (lambda (r) (getf r :uri)) :test #'string=) :kind)
+              :static))
+      (ok (eq (getf (find "/users/:id" routes :key (lambda (r) (getf r :uri)) :test #'string=) :kind)
+              :dynamic))
+      (ok (eq (getf (find "/docs/*" routes :key (lambda (r) (getf r :uri)) :test #'string=) :kind)
+              :catch-all))
+      (ok (eq (getf (find "/not-found" routes :key (lambda (r) (getf r :uri)) :test #'string=) :kind)
+              :not-found)))
+
+    (testing "methods are introspected"
+      (ok (equal (getf (find "/" routes :key (lambda (r) (getf r :uri)) :test #'string=) :methods)
+                 '(:GET)))
+      (ok (equal (getf (find "/not-found" routes :key (lambda (r) (getf r :uri)) :test #'string=) :methods)
+                 '(:not-found))))
+
+    (testing "static routes are ordered before dynamic, dynamic before catch-all"
+      (let ((kinds (mapcar (lambda (r) (getf r :kind)) routes)))
+        (ok (every (lambda (k) (member k '(:static :dynamic :catch-all :not-found))) kinds))
+        (let ((static-pos (position :static kinds :from-end t))
+              (dynamic-pos (position :dynamic kinds))
+              (catch-all-pos (position :catch-all kinds)))
+          (when (and static-pos dynamic-pos)
+            (ok (< static-pos dynamic-pos)))
+          (when (and dynamic-pos catch-all-pos)
+            (ok (< dynamic-pos catch-all-pos))))))))
+
+(deftest check-route-conflicts-test
+  (testing "duplicate URIs (e.g. <id> and <name>) raise a conflict error"
+    (let ((err (handler-case
+                   (ningle-fbr/router::check-route-conflicts
+                    '("/users/<id>" "/users/<name>"))
+                 (route-conflict-error (c) c))))
+      (ok (typep err 'route-conflict-error))
+      (let ((conflicts (route-conflict-error-conflicts err)))
+        (ok (= 1 (length conflicts)))
+        (ok (string= (caar conflicts) "/users/:id"))
+        (ok (equal (cdar conflicts) '("/users/<id>" "/users/<name>"))))))
+
+  (testing "an index file and a sibling file mapping to the same URI conflict"
+    (ok (signals
+            (ningle-fbr/router::check-route-conflicts
+             '("/users/index" "/users"))
+            'route-conflict-error)))
+
+  (testing "non-conflicting paths pass through"
+    (ok (null (ningle-fbr/router::check-route-conflicts
+               '("/" "/hello" "/users" "/users/<id>" "/docs/<...>"))))))
 
 (defmacro with-empty-package ((var) &body body)
   "Bind VAR to a freshly interned, empty package and delete it afterwards."

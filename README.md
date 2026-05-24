@@ -29,6 +29,8 @@ src/
     users/
       index.lisp
       <id>.lisp
+    docs/
+      <...>.lisp
     nested/
       page.lisp
 ```
@@ -103,6 +105,34 @@ For example:
 
 If a request comes in at `/user/123`, `params` will include `:id "123"`.
 
+### Catch-all (Splat) Routes
+
+Use `<...>` — optionally with a descriptive suffix like `<...slug>` — to match
+the remainder of the path, including embedded slashes. The captured value is
+delivered under the `:splat` key as a list (one element per `<...>` segment in
+the route).
+
+For example:
+`:example/routes/docs/<...>` → `/docs/*`
+
+A request to `/docs/intro/getting-started` invokes this route with
+`params` containing `(:splat ("intro/getting-started"))`.
+
+```lisp
+(defpackage #:example/routes/docs/<...>
+  (:use #:cl)
+  (:export #:@get))
+(in-package #:example/routes/docs/<...>)
+
+(defun @get (params)
+  (let ((rest (first (cdr (assoc :splat params)))))
+    (format nil "doc: ~A" rest)))
+```
+
+Precedence is static → dynamic → catch-all, so more-specific files (e.g.
+`docs/index.lisp`, `docs/<slug>.lisp`) win over `docs/<...>.lisp` when they
+also match.
+
 ### 404 Handling
 
 To handle 404 (Not Found) errors, create a special package named `:example/routes/not-found` and define `@not-found` function:
@@ -117,6 +147,33 @@ To handle 404 (Not Found) errors, create a special package named `:example/route
   ;; Implement custom logic here
   )
 ```
+
+### Inspecting Routes
+
+`list-routes` returns a structured description of every route file ningle-fbr
+detects, without installing anything onto an app. Each entry is a plist with
+`:path`, `:uri`, `:package`, `:kind` (`:static`, `:dynamic`, `:catch-all`, or
+`:not-found`), and `:methods` (the exported HTTP method handlers).
+
+```lisp
+(ningle-fbr:list-routes :system :example :dir "routes")
+;; => ((:path "/index"        :uri "/"          :kind :static    :methods (:GET) ...)
+;;     (:path "/hello"        :uri "/hello"     :kind :static    :methods (:GET) ...)
+;;     (:path "/users/<id>"   :uri "/users/:id" :kind :dynamic   :methods (:GET) ...)
+;;     (:path "/docs/<...>"   :uri "/docs/*"    :kind :catch-all :methods (:GET) ...)
+;;     (:path "/not-found"    :uri "/not-found" :kind :not-found :methods (:NOT-FOUND) ...))
+```
+
+Useful for printing a routes table at boot, generating docs, or sanity-checking
+what gets registered.
+
+### Route Conflict Detection
+
+Both `set-routes` and `list-routes` signal `ningle-fbr:route-conflict-error`
+when two files would match the same set of incoming requests — for example
+`users/<id>.lisp` and `users/<name>.lisp`, or `users.lisp` and
+`users/index.lisp`. The condition exposes `route-conflict-error-conflicts`, an
+alist of `(URI . PATHS)` for programmatic handling.
 
 ## License
 
