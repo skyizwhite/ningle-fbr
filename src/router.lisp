@@ -31,35 +31,23 @@
 (in-package #:ningle-fbr/router)
 
 (defun pathname->path (pathname dir-pathname)
-  "Translate an absolute file PATHNAME located under DIR-PATHNAME into a
-leading-slash URL-like path. e.g. /…/routes/users/<id>.lisp under /…/routes/
-becomes \"/users/<id>\"."
   (let* ((file-directory (rest (pathname-directory pathname)))
          (base-directory (rest (pathname-directory dir-pathname)))
          (relative-directory (subseq file-directory (length base-directory))))
     (format nil "/~{~A/~}~A" relative-directory (pathname-name pathname))))
 
 (defun catch-all-path-p (path)
-  "True when PATH contains a catch-all segment (\"<...>\" or \"<...name>\")."
   (and (search "<..." path) t))
 
 (defun dynamic-path-p (path)
-  "True when PATH contains any bracketed segment — covers both named
-parameters (\"<id>\") and catch-alls (\"<...>\")."
   (and (search "<" path) t))
 
 (defun path-precedence-key (path)
-  "Numeric sort key encoding route specificity: static (0) < dynamic (1) <
-catch-all (2). myway dispatches in registration order, so more-specific
-routes must be installed first."
   (cond ((catch-all-path-p path) 2)
         ((dynamic-path-p path) 1)
         (t 0)))
 
 (defun path-precedence< (a b)
-  "Strict ordering on paths used as the sort predicate during route discovery:
-specificity first via PATH-PRECEDENCE-KEY, with ties broken lexicographically
-so the ordering is total and stable across runs."
   (let ((key-a (path-precedence-key a))
         (key-b (path-precedence-key b)))
     (cond ((< key-a key-b) t)
@@ -67,9 +55,6 @@ so the ordering is total and stable across runs."
           (t (string< a b)))))
 
 (defun discover-route-paths (system dir)
-  "Walk DIR (relative to the source root of ASDF SYSTEM) and return every
-*.lisp file in it as a route path, sorted by PATH-PRECEDENCE< so that
-more-specific routes come first."
   (let* ((dir-pathname
            (merge-pathnames (concatenate 'string dir "/")
                             (asdf:component-pathname (asdf:find-system system))))
@@ -79,41 +64,24 @@ more-specific routes come first."
     (sort paths #'path-precedence<)))
 
 (defun strip-index-segment (path)
-  "Collapse a trailing \"/index\" segment so directories addressed by their
-index file expose the bare directory URI. \"/index\" → \"/\" and
-\"/users/index\" → \"/users\"; all other paths pass through unchanged."
   (if (string= path "/index")
       "/"
       (regex-replace "/index$" path "")))
 
 (defun bracket->myway (path)
-  "Translate file-based parameter syntax into myway's URL grammar:
-  <...> or <...name> → *      (catch-all, surfaced as :SPLAT in params)
-  <name>             → :name  (named parameter)
-The catch-all transformation runs first so that <...rest> is not mis-parsed
-as the named parameter :...rest."
   (let ((after-catch-all (regex-replace-all "<\\.\\.\\.[^>]*>" path "*")))
     (regex-replace-all "<([^>]+)>" after-catch-all ":\\1")))
 
 (defun path->uri (path)
-  "Convert a route PATH (as produced by PATHNAME->PATH) into the URI string
-that ningle/myway will match against incoming requests: collapses /index
-segments and rewrites bracketed parameters to myway's :name/* syntax."
   (bracket->myway (strip-index-segment path)))
 
 (defun path-kind (path uri)
-  "Classify a detected route file as :STATIC, :DYNAMIC, :CATCH-ALL, or
-:NOT-FOUND. URI is needed to recognise the special /not-found handler;
-specificity (catch-all before dynamic before static) is derived from PATH."
   (cond ((string= uri "/not-found") :not-found)
         ((catch-all-path-p path) :catch-all)
         ((dynamic-path-p path) :dynamic)
         (t :static)))
 
 (defun path->package (path system dir)
-  "Derive the keyword naming the package that ningle-fbr expects to find a
-route's handlers in: \"SYSTEM/DIR/PATH\" upcased into a keyword. e.g. path
-\"/users/<id>\" under system :APP, dir \"routes\" → :APP/ROUTES/USERS/<ID>."
   (make-keyword (string-upcase (concatenate 'string
                                             (string system)
                                             "/"
@@ -121,82 +89,56 @@ route's handlers in: \"SYSTEM/DIR/PATH\" upcased into a keyword. e.g. path
                                             path))))
 
 (defparameter *http-request-methods*
-  '(:GET :POST :PUT :DELETE :HEAD :CONNECT :OPTIONS :PATCH :TRACE)
-  "HTTP request methods scanned for on each route package. For every method M
-in this list, a handler is looked up as the external symbol named \"@M\"
-(e.g. @GET, @POST). New methods can be added here without touching the
-installation logic.")
+  '(:GET :POST :PUT :DELETE :HEAD :CONNECT :OPTIONS :PATCH :TRACE))
 
 (defparameter *http-method-handler-names*
   (mapcar (lambda (method)
             (cons method (concatenate 'string "@" (string method))))
-          *http-request-methods*)
-  "Precomputed (METHOD . \"@METHOD\") pairs so EXPORTED-HTTP-METHODS doesn't
-reallocate the lookup strings on every route.")
+          *http-request-methods*))
 
 (defun ensure-route-package-loaded (pkg)
-  "Call LOAD-SYSTEM on PKG only when its package isn't already interned. Route
-packages are package-inferred-system sub-systems, so LOAD-SYSTEM walks the
-ASDF graph and re-checks file timestamps even when the system is fully
-loaded — that's the dominant cost of LIST-ROUTES / SET-ROUTES on warm calls.
-The presence of the package is a sufficient proxy for \"its handlers are
-introspectable\", which is all both callers actually need."
   (unless (find-package pkg)
     (load-system pkg)))
 
 (defun find-exported-symbol (name pkg)
-  "Return the symbol named NAME in PKG only if it is exported, otherwise NIL.
-Used so we never install handlers that aren't part of a route package's
-public interface — interned-but-not-exported symbols are treated as absent."
   (multiple-value-bind (symbol status) (find-symbol name pkg)
     (and (eq status :external) symbol)))
 
 (defun exported-http-methods (pkg)
-  "List the HTTP method keywords for which PKG exports a handler symbol
-(\"@GET\", \"@POST\", …). The order of the returned list mirrors
-*HTTP-REQUEST-METHODS*."
   (loop for (method . handler-name) in *http-method-handler-names*
         when (find-exported-symbol handler-name pkg)
           collect method))
 
 (define-condition route-definition-error (error) ()
-  (:documentation "Base condition for problems detected while loading or
-installing routes — conflicts, missing handlers, unbound symbols, etc."))
+  (:documentation "Base condition for route loading and installation problems."))
 
 (define-condition route-conflict-error (route-definition-error)
   ((conflicts :initarg :conflicts
-              :reader route-conflict-error-conflicts
-              :documentation "Alist of (URI . PATHS) where PATHS is a list of
-file-derived paths colliding on URI."))
+              :reader route-conflict-error-conflicts))
   (:report
    (lambda (condition stream)
      (format stream
              "ningle-fbr: multiple route files map to the same URI:~%~{  ~A~%~}"
              (loop for (uri . paths) in (route-conflict-error-conflicts condition)
-                   collect (format nil "~S <- ~{~S~^, ~}" uri paths))))))
+                   collect (format nil "~S <- ~{~S~^, ~}" uri paths)))))
+  (:documentation "Signalled when several route files map to the same URI."))
 
 (define-condition missing-not-found-handler (route-definition-error)
   ((package :initarg :package
-            :reader missing-not-found-handler-package
-            :documentation "The route package mapped to /not-found that fails
-to export an @NOT-FOUND symbol."))
+            :reader missing-not-found-handler-package))
   (:report
    (lambda (condition stream)
      (format stream
              "Route package ~A is mapped to /not-found but does not export an ~
               @NOT-FOUND symbol. Did you forget to (:export #:@not-found)?"
              (missing-not-found-handler-package condition))))
-  (:documentation "Signalled when a /not-found route package is detected but
-no @NOT-FOUND symbol is exported from it."))
+  (:documentation "Signalled when a /not-found route package does not export @NOT-FOUND."))
 
 (define-condition missing-method-handlers (route-definition-error)
   ((package :initarg :package
-            :reader missing-method-handlers-package
-            :documentation "The route package that exports no HTTP method
-handlers.")
+            :reader missing-method-handlers-package)
    (uri :initarg :uri
-        :reader missing-method-handlers-uri
-        :documentation "The URI this package was mapped to."))
+        :reader missing-method-handlers-uri))
   (:report
    (lambda (condition stream)
      (format stream
@@ -204,22 +146,16 @@ handlers.")
               Expected at least one of @GET, @POST, @PUT, @DELETE, …"
              (missing-method-handlers-package condition)
              (missing-method-handlers-uri condition))))
-  (:documentation "Signalled when a non-/not-found route package is detected
-but exports none of the recognised @METHOD handler symbols."))
+  (:documentation "Signalled when a route package exports no @METHOD handler."))
 
 (define-condition unbound-route-handler (route-definition-error)
   ((package :initarg :package
-            :reader unbound-route-handler-package
-            :documentation "The route package owning the unbound handler
-symbol.")
+            :reader unbound-route-handler-package)
    (uri :initarg :uri
         :initform nil
-        :reader unbound-route-handler-uri
-        :documentation "URI the handler was being installed for, or NIL for
-the /not-found handler.")
+        :reader unbound-route-handler-uri)
    (handler :initarg :handler
-            :reader unbound-route-handler-handler
-            :documentation "The exported but unbound handler symbol."))
+            :reader unbound-route-handler-handler))
   (:report
    (lambda (condition stream)
      (let ((uri (unbound-route-handler-uri condition)))
@@ -235,24 +171,14 @@ the /not-found handler.")
                     definition."
                    (unbound-route-handler-package condition)
                    (unbound-route-handler-handler condition))))))
-  (:documentation "Signalled when a route package exports an @METHOD or
-@NOT-FOUND symbol that is not FBOUNDP — usually because the handler
-function was never DEFUN'd or the file failed to load cleanly."))
+  (:documentation "Signalled when an exported handler symbol has no function definition."))
 
 (defun uri-match-key (uri)
-  "Normalise URI so that two URIs matching the same set of incoming paths share
-a key. Named parameters collapse to one sentinel, splats to another — so
-/users/:id and /users/:name share a key (real conflict), but /docs/:slug and
-/docs/* do not (myway dispatches the splat differently)."
   (regex-replace-all ":[^/]+"
                      (regex-replace-all "\\*" uri "<<SPLAT>>")
                      "<<PARAM>>"))
 
 (defun check-route-conflicts (paths)
-  "Signal ROUTE-CONFLICT-ERROR when several PATHS resolve to URIs that would
-match the same incoming requests (URI-match equivalence per URI-MATCH-KEY,
-not just string =). The resulting condition lists every colliding group
-with its representative URI and the paths in it."
   (let ((paths-by-match-key (make-hash-table :test 'equal)))
     (dolist (path paths)
       (let ((uri (path->uri path)))
@@ -271,10 +197,6 @@ with its representative URI and the paths in it."
                :conflicts (sort conflicts #'string< :key #'car))))))
 
 (defun install-not-found-handler (app pkg)
-  "Wire PKG's exported @NOT-FOUND function into APP as the NINGLE:NOT-FOUND
-method, also forcing the response status to 404. Signals
-MISSING-NOT-FOUND-HANDLER if the symbol is not exported and
-UNBOUND-ROUTE-HANDLER if it is exported but has no function binding."
   (let ((handler (find-exported-symbol "@NOT-FOUND" pkg)))
     (unless handler
       (error 'missing-not-found-handler :package pkg))
@@ -286,12 +208,6 @@ UNBOUND-ROUTE-HANDLER if it is exported but has no function binding."
       (funcall handler))))
 
 (defun install-method-handlers (app uri pkg methods)
-  "Register the @METHOD handler exported by PKG for each keyword in METHODS as
-a route on APP at URI. METHODS is the list already produced by
-EXPORTED-HTTP-METHODS / LIST-ROUTES, so this function neither rescans the
-package nor consults *HTTP-REQUEST-METHODS*. Signals MISSING-METHOD-HANDLERS
-if METHODS is empty, and UNBOUND-ROUTE-HANDLER if an exported handler symbol
-has no function binding."
   (when (null methods)
     (error 'missing-method-handlers :package pkg :uri uri))
   (dolist (method methods)
@@ -304,11 +220,9 @@ has no function binding."
       (setf (ningle:route app uri :method method) handler))))
 
 (defun list-routes (&key system dir)
-  "Return one plist per detected route under SYSTEM and DIR. Keys: :PATH,
-:URI, :PACKAGE, :KIND (:STATIC, :DYNAMIC, :CATCH-ALL, or :NOT-FOUND), and
-:METHODS (a list of HTTP method keywords, or (:NOT-FOUND) for the special
-handler). Each route package is loaded so handlers can be introspected —
-same side effect as SET-ROUTES, minus installation into an app."
+  "Return a plist for every route file under DIR (relative to ASDF SYSTEM's
+source root). Each plist has :PATH, :URI, :PACKAGE, :KIND (:STATIC, :DYNAMIC,
+:CATCH-ALL, or :NOT-FOUND), and :METHODS (the exported HTTP method keywords)."
   (let ((paths (discover-route-paths system dir)))
     (check-route-conflicts paths)
     (loop for path in paths
@@ -325,13 +239,10 @@ same side effect as SET-ROUTES, minus installation into an app."
                                      (exported-http-methods pkg))))))
 
 (defmethod set-routes ((app ningle:app) &key system dir)
-  "Discover every route file under DIR (relative to ASDF SYSTEM's source
-root) via LIST-ROUTES, then install each entry onto APP. Routes are
-installed in the order LIST-ROUTES returns them — static before dynamic
-before catch-all — so myway's first-match dispatch favours the more
-specific route. The route classified as :NOT-FOUND is installed as the
-custom 404 handler instead. Signals a ROUTE-DEFINITION-ERROR subclass on
-conflicts, missing handlers, or unbound handler symbols."
+  "Install every route file under DIR (relative to ASDF SYSTEM's source root)
+onto APP. The package mapped to /not-found becomes APP's custom 404 handler.
+Signals a ROUTE-DEFINITION-ERROR on conflicts, missing handlers, or unbound
+handler symbols."
   (dolist (route (list-routes :system system :dir dir))
     (let ((pkg (getf route :package)))
       (if (eq (getf route :kind) :not-found)
