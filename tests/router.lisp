@@ -245,3 +245,42 @@
                   t)
               (error () nil)))))))
 
+
+(defparameter *reload-routes-dir*
+  (merge-pathnames "reload-routes/"
+                   (asdf:component-pathname
+                    (asdf:find-system :ningle-fbr-test))))
+
+(defun write-reload-route (body)
+  (with-open-file (s (merge-pathnames "greeting.lisp" *reload-routes-dir*)
+                     :direction :output
+                     :if-exists :supersede
+                     :if-does-not-exist :create)
+    (format s "(defpackage #:ningle-fbr-test/reload-routes/greeting~%  ~
+                 (:use #:cl)~%  (:export #:@get))~%~
+               (in-package #:ningle-fbr-test/reload-routes/greeting)~%~%~
+               (defun @get (params)~%  (declare (ignore params))~%  ~S)~%"
+            body)))
+
+(defun set-reload-routes (app)
+  ;; A real reload runs in a fresh ASDF session. Inside TEST-OP the enclosing
+  ;; session would treat the already-loaded route as up to date.
+  (let ((asdf::*asdf-session* nil))
+    (set-routes app :system :ningle-fbr-test :dir "reload-routes")))
+
+(deftest reload-test
+  (testing "calling set-routes again picks up edits to an already-loaded route file"
+    (ensure-directories-exist *reload-routes-dir*)
+    (unwind-protect
+         (let ((app (make-instance 'ningle:app)))
+           (write-reload-route "before")
+           (set-reload-routes app)
+           (testing-app (lack:builder app)
+             (ok (string= (request "/greeting") "before")))
+           ;; ASDF compares file-write-date, which has one-second resolution.
+           (sleep 1.1)
+           (write-reload-route "after")
+           (set-reload-routes app)
+           (testing-app (lack:builder app)
+             (ok (string= (request "/greeting") "after"))))
+      (uiop:delete-directory-tree *reload-routes-dir* :validate t))))

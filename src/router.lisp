@@ -96,10 +96,6 @@
             (cons method (concatenate 'string "@" (string method))))
           *http-request-methods*))
 
-(defun ensure-route-package-loaded (pkg)
-  (unless (find-package pkg)
-    (load-system pkg)))
-
 (defun find-exported-symbol (name pkg)
   (multiple-value-bind (symbol status) (find-symbol name pkg)
     (and (eq status :external) symbol)))
@@ -228,7 +224,7 @@ source root). Each plist has :PATH, :URI, :PACKAGE, :KIND (:STATIC, :DYNAMIC,
     (loop for path in paths
           for uri = (path->uri path)
           for pkg = (path->package path system dir)
-          do (ensure-route-package-loaded pkg)
+          do (load-system pkg)
           collect (list :path path
                         :uri uri
                         :package pkg
